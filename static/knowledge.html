@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload Knowledge</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem auto;
+      max-width: 700px;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+    nav {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      background-color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    nav a {
+      text-decoration: none;
+      color: #007acc;
+      font-weight: bold;
+      transition: color 0.2s;
+    }
+    nav a.active, nav a:hover {
+      color: #004a80;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #222;
+    }
+    #uploadContainer {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+    }
+    #uploadControls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    #fileUpload {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #uploadBtn {
+      background-color: #28a745;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    #uploadBtn:hover {
+      background-color: #218838;
+    }
+    #uploadStatus {
+      margin-top: 1rem;
+      font-style: italic;
+      color: #555;
+      text-align: center;
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">Chat</a>
+    <a href="tickets.html">Tickets</a>
+    <a href="users.html">Users</a>
+    <a href="knowledge.html" class="active">Knowledge</a>
+  </nav>
+
+  <h1>Upload Knowledge to RAG</h1>
+
+  <div id="uploadContainer">
+    <p>Select a .txt, .json, or .pdf file to embed its content into the vector database for this session.</p>
+    <div id="uploadControls">
+      <input type="file" id="fileUpload" accept=".txt,.json,.pdf">
+      <button id="uploadBtn">Upload File</button>
+    </div>
+    <p id="uploadStatus"></p>
+  </div>
+
+  <script type="module">
+    const apiBase = ""; // Assumes API is on the same host/port
+
+    // Configure the PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+    const fileInput = document.getElementById('fileUpload');
+    const statusElem = document.getElementById('uploadStatus');
+
+    // Reusable function to send extracted content to the backend
+    async function sendContentToBackend(filename, content) {
+      statusElem.textContent = `Embedding "${filename}"...`;
+      statusElem.style.color = '#555';
+      try {
+        const response = await fetch(`${apiBase}/upload-text/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename, content }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.detail || 'Upload failed.');
+        }
+        statusElem.textContent = `✅ ${result.message}`;
+        statusElem.style.color = '#28a745';
+        fileInput.value = ''; // Clear the file input
+      } catch (error) {
+        statusElem.textContent = `❌ Error: ${error.message}`;
+        statusElem.style.color = '#dc3545';
+      }
+    }
+
+    // Main function to handle file upload, now with type checking
+    async function handleFileUpload() {
+      const file = fileInput.files[0];
+      if (!file) {
+        statusElem.textContent = "Please select a file first.";
+        return;
+      }
+
+      statusElem.textContent = `Reading "${file.name}"...`;
+      const fileType = file.name.split('.').pop().toLowerCase();
+      const reader = new FileReader();
+
+      // --- 4. NEW LOGIC TO HANDLE DIFFERENT FILE TYPES ---
+      if (fileType === 'txt' || fileType === 'json') {
+        reader.onload = async (event) => {
+          await sendContentToBackend(file.name, event.target.result);
+        };
+        reader.onerror = () => {
+          statusElem.textContent = '❌ Failed to read the text file.';
+          statusElem.style.color = '#dc3545';
+        };
+        reader.readAsText(file);
+      } else if (fileType === 'pdf') {
+        reader.onload = async (event) => {
+          try {
+            const pdf = await pdfjsLib.getDocument({ data: event.target.result }).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items.map(item => item.str).join(' ');
+              fullText += pageText + '\n\n'; // Add space between pages
+            }
+            await sendContentToBackend(file.name, fullText);
+          } catch (error) {
+            statusElem.textContent = `❌ Failed to parse PDF: ${error.message}`;
+            statusElem.style.color = '#dc3545';
+          }
+        };
+        reader.onerror = () => {
+          statusElem.textContent = '❌ Failed to read the PDF file.';
+          statusElem.style.color = '#dc3545';
+        };
+        reader.readAsArrayBuffer(file); // Read PDF as a binary buffer
+      } else {
+        statusElem.textContent = 'Unsupported file type. Please upload .txt, .json, or .pdf.';
+        statusElem.style.color = '#dc3545';
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("uploadBtn").addEventListener("click", handleFileUpload);
+    });
+  </script>
+</body>
+</html>

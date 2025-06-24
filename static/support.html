@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Helpdesk Support</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem auto;
+      max-width: 700px;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+    nav {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      background-color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    nav a {
+      text-decoration: none;
+      color: #007acc;
+      font-weight: bold;
+      transition: color 0.2s;
+    }
+    nav a.active, nav a:hover {
+      color: #004a80;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #222;
+    }
+    /* LOGIN OVERLAY */
+    #loginOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #loginBox {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+    #loginBox h2 {
+      margin-bottom: 1rem;
+    }
+    #loginBox input[type="text"],
+    #loginBox input[type="password"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    #loginBox button {
+      background-color: #007acc;
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    #loginBox button:hover {
+      background-color: #005f99;
+    }
+
+    /* CHAT CONTAINER */
+    #chatContainer {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+      display: none; /* hidden until login */
+    }
+    #chatHistory {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.5rem;
+      background: #fafafa;
+    }
+    .message {
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+    .message.user {
+      text-align: right;
+    }
+    .message.user .bubble {
+      display: inline-block;
+      background-color: #007acc;
+      color: #fff;
+      padding: 0.5rem 0.75rem;
+      border-radius: 12px 12px 0 12px;
+      max-width: 80%;
+    }
+    .message.bot .bubble {
+      display: inline-block;
+      background-color: #e6e6e6;
+      color: #000;
+      padding: 0.5rem 0.75rem;
+      border-radius: 12px 12px 12px 0;
+      max-width: 80%;
+    }
+    #chatInputArea {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    #chatQuestion {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      transition: border-color 0.2s;
+    }
+    #chatQuestion:focus {
+      border-color: #007acc;
+      outline: none;
+    }
+    #chatSendBtn {
+      background-color: #007acc;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    #chatSendBtn:hover {
+      background-color: #005f99;
+    }
+
+    /* QUICK ACTIONS BOX */
+    #quickActions {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-top: 1rem;
+      text-align: center;
+      display: none; /* hidden until login */
+    }
+    #quickActions h2 {
+      margin-bottom: 0.75rem;
+      color: #555;
+    }
+    .actionBtn {
+      background-color: #007acc;
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      margin: 0 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .actionBtn:hover {
+      background-color: #005f99;
+    }
+
+    pre {
+      background: #e9ecef;
+      padding: 0.5rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay">
+    <div id="loginBox">
+      <h2>Welcome to IT Helpdesk</h2>
+      <p>Please log in with your email and password</p>
+      <input type="text" id="loginEmail" placeholder="Email address" />
+      <input type="password" id="loginPassword" placeholder="Password" />
+      <button id="loginBtn">Continue</button>
+    </div>
+  </div>
+
+  <nav>
+    <a href="support.html" class="active">Support</a>
+  </nav>
+
+  <h1>Helpdesk Support</h1>
+
+  <!-- CHAT CONTAINER (hidden until login) -->
+  <div id="chatContainer">
+    <div id="chatHistory">
+      <!-- Chat messages appear here -->
+    </div>
+    <div id="chatInputArea">
+      <textarea id="chatQuestion" rows="2" placeholder="Type your message..."></textarea>
+      <button id="chatSendBtn">Send</button>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS (hidden until login) -->
+  <div id="quickActions">
+    <h2>Quick Actions</h2>
+    <button id="openTicketBtn" class="actionBtn">Open Ticket</button>
+    <button id="viewMyTicketsBtn" class="actionBtn">My Tickets</button>
+  </div>
+
+  <script>
+    const apiBase = "";
+
+    // 1. Maintain chat history for RAG context
+    const chatHistoryForLLM = [];
+    let ragAnswerCount = 0;
+
+    // 2. Chat state for guided flows + storing userName & userId
+    const chatState = {
+      mode: "rag",         // "rag", "create_ticket", "view_my_tickets"
+      step: 0,
+      ticketDraft: {},     // { issue }
+      userName: null,      // stored once logged in
+      userId: null,        // stored once logged in
+      enteredEmail: null   // the email they logged in with
+    };
+
+    let allUsers = [];
+
+    // Utility: append a message to chat history (UI & LLM memory)
+    function appendMessage(sender, text) {
+      const container = document.getElementById("chatHistory");
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("message", sender);
+      const bubble = document.createElement("div");
+      bubble.classList.add("bubble");
+      bubble.innerHTML = text;
+      msgDiv.appendChild(bubble);
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+
+      if (sender === "user" || sender === "bot") {
+        chatHistoryForLLM.push({
+          role: sender === "user" ? "user" : "assistant",
+          content: text
+        });
+        if (chatHistoryForLLM.length > 6) {
+          chatHistoryForLLM.shift();
+        }
+      }
+    }
+
+    // Get today’s date in YYYY-MM-DD
+    function todayISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    // Fetch all users once and cache
+    async function loadAllUsers() {
+      const resp = await fetch(`${apiBase}/users/`);
+      if (!resp.ok) return [];
+      allUsers = await resp.json();
+    }
+
+    // 3. Ticket Creation Flow (after login)
+    function startTicketCreation() {
+      chatState.mode = "create_ticket";
+      chatState.step = 0;
+      chatState.ticketDraft = {};
+
+      // We already know userId and userName
+      appendMessage("bot", `Hi ${chatState.userName}, please describe the issue you’re experiencing.`);
+      chatState.step = 1;
+    }
+
+    async function handleTicketCreation(input) {
+      const trimmed = input.trim();
+      if (chatState.step === 1) {
+        // Create ticket using stored userId
+        chatState.ticketDraft.issue = trimmed;
+        const payload = {
+          issue: chatState.ticketDraft.issue,
+          status: "Open",
+          resolution: null,
+          date_opened: todayISO(),
+          date_closed: null,
+          requester_id: chatState.userId
+        };
+        try {
+          const resp = await fetch(`${apiBase}/tickets/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!resp.ok) {
+            const err = await resp.json();
+            appendMessage("bot", `Error creating ticket: ${err.detail || resp.statusText}`);
+          } else {
+            const newTicket = await resp.json();
+            appendMessage("bot", `Your ticket (#${newTicket.ticket_id}) was created successfully!`);
+          }
+        } catch (e) {
+          appendMessage("bot", `Error: ${e.message}`);
+        }
+        chatState.mode = "rag";
+        chatState.step = 0;
+        chatState.ticketDraft = {};
+      }
+    }
+
+    // 4. View My Tickets Flow (after login)
+    function startViewMyTickets() {
+      chatState.mode = "view_my_tickets";
+      chatState.step = 0;
+      chatState.ticketDraft = {};
+      fetchAndShowUserTickets(chatState.userId);
+      chatState.mode = "rag"; // immediately return to RAG after showing
+    }
+
+    async function fetchAndShowUserTickets(userId) {
+      try {
+        const resp = await fetch(`${apiBase}/tickets/`);
+        if (!resp.ok) {
+          appendMessage("bot", `Error fetching tickets.`);
+          return;
+        }
+        const tickets = await resp.json();
+        const userTickets = tickets.filter(t => t.requester_id === userId);
+        if (userTickets.length === 0) {
+          appendMessage("bot", "I didn’t find any tickets under your name.");
+        } else {
+          let output = `Your tickets:\n`;
+          userTickets.forEach(t => {
+            output += 
+              `• ID ${t.ticket_id}: ${t.issue} (Status: ${t.status}, Opened: ${t.date_opened}` +
+              `${t.date_closed ? `, Closed: ${t.date_closed}` : ""})\n`;
+          });
+          appendMessage("bot", `<pre>${output}</pre>`);
+        }
+      } catch (e) {
+        appendMessage("bot", `Error: ${e.message}`);
+      }
+    }
+
+    // 5. View a single ticket by ID
+    async function viewTicketById(id) {
+      try {
+        const resp = await fetch(`${apiBase}/tickets/${id}`);
+        if (!resp.ok) {
+          appendMessage("bot", `Ticket ${id} not found.`);
+        } else {
+          const t = await resp.json();
+          let info =
+            `Ticket ${t.ticket_id}\n` +
+            `Issue: ${t.issue}\n` +
+            `Status: ${t.status}\n` +
+            `Opened: ${t.date_opened}\n` +
+            `Closed: ${t.date_closed || "N/A"}`;
+          appendMessage("bot", `<pre>${info}</pre>`);
+        }
+      } catch (e) {
+        appendMessage("bot", `Error fetching ticket: ${e.message}`);
+      }
+    }
+
+    // 6. Enhanced RAG-based chat (no duplicate user echo)
+    async function ragChat(input) {
+      appendMessage("bot", "Thinking...");
+      try {
+        // Build a simple context array for the API: last 4 messages
+        const msgs = chatHistoryForLLM.slice(-4).map(m => ({
+          role: m.role,
+          content: m.content
+        }));
+        msgs.push({ role: "user", content: input });
+
+        const resp = await fetch(`${apiBase}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: JSON.stringify(msgs) })
+        });
+        const data = await resp.json();
+        // Remove "Thinking..." placeholder
+        const container = document.getElementById("chatHistory");
+        container.removeChild(container.lastChild);
+
+        if (!resp.ok) {
+          appendMessage("bot", `Error: ${data.detail || resp.statusText}`);
+        } else {
+          ragAnswerCount++;
+          const answer = data.answer;
+          appendMessage("bot", answer);
+
+          // If LLM says “open ticket”, auto-begin ticket flow
+          if (/open (a )?ticket/i.test(answer)) {
+            appendMessage("bot", "It sounds like you may need a ticket. Let’s open one now.");
+            startTicketCreation();
+            return;
+          }
+
+          // After 2 RAG answers, show follow-up prompt
+          if (ragAnswerCount >= 2) {
+            appendMessage(
+              "bot",
+              "Did that help? If not, click “Open Ticket” to create a support ticket, “My Tickets” to view your tickets, or type “Show Ticket <ID>.”"
+            );
+          }
+        }
+      } catch (e) {
+        appendMessage("bot", `Error: ${e.message}`);
+      }
+    }
+
+    // 7. Main handler for user input (no duplicates)
+    async function handleUserInput() {
+      const inputElem = document.getElementById("chatQuestion");
+      const text = inputElem.value.trim();
+      if (!text) return;
+      inputElem.value = "";
+
+      // Echo user message exactly once
+      appendMessage("user", text);
+
+      // Guided ticket creation
+      if (chatState.mode === "create_ticket") {
+        await handleTicketCreation(text);
+        return;
+      }
+
+      // Detect “open ticket”
+      if (/open (a )?ticket/i.test(text)) {
+        startTicketCreation();
+        return;
+      }
+
+      // Detect “show ticket <ID>”
+      let matchId = text.match(/^show\s+ticket\s+(\d+)/i);
+      if (matchId) {
+        const id = matchId[1];
+        await viewTicketById(id);
+        return;
+      }
+
+      // Detect “my tickets”
+      if (/^(my )?tickets$/i.test(text) || /^(show )?my tickets/i.test(text)) {
+        startViewMyTickets();
+        return;
+      }
+
+      // Normal RAG chat
+      await ragChat(text);
+    }
+
+    // 8. Login flow (email + password)
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const emailInput = document.getElementById("loginEmail").value.trim();
+      const passwordInput = document.getElementById("loginPassword").value; // not validated
+      if (!emailInput || !passwordInput) return;
+
+      chatState.enteredEmail = emailInput;
+
+      // Fetch all users and look for a match by email
+      await loadAllUsers();
+      let matched = allUsers.filter(u => u.email.toLowerCase() === emailInput.toLowerCase());
+      let userObj;
+      if (matched.length === 1) {
+        userObj = matched[0];
+      } else {
+        // No existing user → create a new one with placeholder full_name = part before '@'
+        const nameDefault = emailInput.split("@")[0];
+        const userPayload = {
+          full_name: nameDefault,
+          email: emailInput,
+          department: "Support"
+        };
+        try {
+          const resp = await fetch(`${apiBase}/users/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(userPayload)
+          });
+          if (!resp.ok) {
+            const err = await resp.json();
+            alert("Error creating user: " + (err.detail || resp.statusText));
+            return;
+          }
+          userObj = await resp.json();
+          allUsers.push(userObj);
+        } catch (e) {
+          alert("Error: " + e.message);
+          return;
+        }
+      }
+
+      // Now “log in” as that user
+      chatState.userName = userObj.full_name;
+      chatState.userId = userObj.user_id;
+
+      // Hide login overlay, show chat + quick actions
+      document.getElementById("loginOverlay").style.display = "none";
+      document.getElementById("chatContainer").style.display = "block";
+      document.getElementById("quickActions").style.display = "block";
+
+      appendMessage("bot", `Hello, ${chatState.userName}! Ask a question or use the buttons below to Open Ticket or view My Tickets. You can also type “Show Ticket <ID>.”`);
+    });
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Initially only login overlay is visible
+      document.getElementById("chatContainer").style.display = "none";
+      document.getElementById("quickActions").style.display = "none";
+
+      document.getElementById("chatSendBtn").addEventListener("click", handleUserInput);
+      document.getElementById("chatQuestion").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleUserInput();
+        }
+      });
+
+      // Quick‐action buttons
+      document.getElementById("openTicketBtn").addEventListener("click", () => {
+        startTicketCreation();
+      });
+      document.getElementById("viewMyTicketsBtn").addEventListener("click", () => {
+        startViewMyTickets();
+      });
+    });
+  </script>
+</body>
+</html>

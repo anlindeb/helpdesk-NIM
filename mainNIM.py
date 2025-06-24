@@ -377,6 +377,6 @@ if os.path.isdir("static"):
 # Optional: main block to run with uvicorn for development
 if __name__ == "__main__":
     import uvicorn
-    print(f"Starting IT Helpdesk Backend on http://localhost:8000 (or your specified port)")
+    print(f"Starting IT Helpdesk Backend on http://localhost:8001 (or your specified port)")
     # Ensure this port matches what your HTML expects for apiBase, or adjust HTML
     uvicorn.run(app, host="0.0.0.0", port=8000)
